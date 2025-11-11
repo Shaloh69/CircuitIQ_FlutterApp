@@ -19,6 +19,10 @@ class _HomeScreenState extends State<HomeScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   int _currentTabIndex = 0;
+  
+  // FIXED: Store provider references to avoid context issues in dispose
+  DeviceProvider? _deviceProvider;
+  AuthProvider? _authProvider;
 
   @override
   void initState() {
@@ -35,9 +39,20 @@ class _HomeScreenState extends State<HomeScreen>
     });
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // FIXED: Store provider references safely in didChangeDependencies
+    _deviceProvider = Provider.of<DeviceProvider>(context, listen: false);
+    _authProvider = Provider.of<AuthProvider>(context, listen: false);
+  }
+
   Future<void> _initialize() async {
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final deviceProvider = Provider.of<DeviceProvider>(context, listen: false);
+    // FIXED: Use stored provider references instead of context lookup
+    final authProvider = _authProvider;
+    final deviceProvider = _deviceProvider;
+    
+    if (authProvider == null || deviceProvider == null) return;
 
     // Connect WebSocket
     if (authProvider.serverUrl != null) {
@@ -60,8 +75,10 @@ class _HomeScreenState extends State<HomeScreen>
   @override
   void dispose() {
     _tabController.dispose();
-    final deviceProvider = Provider.of<DeviceProvider>(context, listen: false);
-    deviceProvider.disconnectWebSocket();
+    
+    // FIXED: Use stored provider reference instead of context lookup
+    _deviceProvider?.disconnectWebSocket();
+    
     super.dispose();
   }
 
@@ -88,12 +105,15 @@ class _HomeScreenState extends State<HomeScreen>
     );
 
     if (confirm == true && mounted) {
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      final deviceProvider = Provider.of<DeviceProvider>(context, listen: false);
+      // FIXED: Use stored provider references
+      final authProvider = _authProvider;
+      final deviceProvider = _deviceProvider;
       
-      deviceProvider.disconnectWebSocket();
-      deviceProvider.clearData();
-      await authProvider.logout();
+      if (authProvider != null && deviceProvider != null) {
+        deviceProvider.disconnectWebSocket();
+        deviceProvider.clearData();
+        await authProvider.logout();
+      }
       
       if (mounted) {
         Navigator.of(context).pushReplacementNamed('/login');

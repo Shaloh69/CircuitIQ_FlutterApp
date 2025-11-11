@@ -31,6 +31,71 @@ class _DashboardTabState extends State<DashboardTab> {
                   'Waiting for data...',
                   style: Theme.of(context).textTheme.bodyLarge,
                 ),
+                const SizedBox(height: 8),
+                Text(
+                  deviceProvider.isConnected 
+                      ? 'Connected • Listening for sensor data'
+                      : 'Connecting to server...',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Colors.grey[600],
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    ElevatedButton.icon(
+                      onPressed: () => deviceProvider.refreshDevice(),
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Fetch Data'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    OutlinedButton.icon(
+                      onPressed: () => _generateMockData(deviceProvider),
+                      icon: const Icon(Icons.science_outlined),
+                      label: const Text('Test Data'),
+                    ),
+                  ],
+                ),
+                if (deviceProvider.error != null) ...[
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    margin: const EdgeInsets.symmetric(horizontal: 32),
+                    decoration: BoxDecoration(
+                      color: AppColors.danger.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: AppColors.danger),
+                    ),
+                    child: Column(
+                      children: [
+                        const Icon(Icons.error_outline, color: AppColors.danger),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Error loading data',
+                          style: TextStyle(
+                            color: AppColors.danger,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          deviceProvider.error!,
+                          style: TextStyle(
+                            color: Colors.grey[700],
+                            fontSize: 12,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ],
             ),
           );
@@ -41,6 +106,84 @@ class _DashboardTabState extends State<DashboardTab> {
           child: ListView(
             padding: const EdgeInsets.all(16),
             children: [
+              // Connection Status Banner
+              if (!deviceProvider.isConnected)
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: AppColors.warning.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppColors.warning),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.cloud_off, color: AppColors.warning, size: 20),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'WebSocket Disconnected',
+                              style: TextStyle(
+                                color: AppColors.warning,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              'Showing last received data',
+                              style: TextStyle(
+                                color: Colors.grey[700],
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              
+              // Last Update Info
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: AppColors.info.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.access_time,
+                          size: 16,
+                          color: Colors.grey[600],
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Last Update: ${formatDateTime(data.timestamp)}',
+                          style: TextStyle(
+                            color: Colors.grey[700],
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.refresh, size: 20),
+                      onPressed: () => deviceProvider.refreshDevice(),
+                      tooltip: 'Refresh data',
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                  ],
+                ),
+              ),
+              
               // Voltage Card
               MetricCard(
                 title: 'System Voltage',
@@ -141,8 +284,7 @@ class _DashboardTabState extends State<DashboardTab> {
                       _buildStatusRow('State', data.state, AppColors.info),
                       _buildStatusRow('Sensors', data.sensors, 
                           data.sensors == 'valid' ? AppColors.success : AppColors.warning),
-                      _buildStatusRow('Last Update', formatDateTime(data.timestamp), 
-                          AppColors.info),
+                      _buildStatusRow('Device ID', data.deviceId, AppColors.info),
                     ],
                   ),
                 ),
@@ -156,6 +298,23 @@ class _DashboardTabState extends State<DashboardTab> {
         );
       },
     );
+  }
+
+  Future<void> _generateMockData(DeviceProvider provider) async {
+    final success = await provider.generateMockData(count: 1);
+    
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            success 
+                ? 'Mock data generated successfully' 
+                : 'Failed to generate mock data',
+          ),
+          backgroundColor: success ? AppColors.success : AppColors.danger,
+        ),
+      );
+    }
   }
 
   Widget _buildMetricItem(

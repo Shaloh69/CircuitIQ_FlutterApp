@@ -101,13 +101,16 @@ class DeviceProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
+      debugPrint('📡 Loading devices from API...');
       _allDevices = await _apiService.getDevices();
       _allDevices = _allDevices
           .where((d) => d.deviceType == AppConstants.deviceType)
           .toList();
+      debugPrint('✅ Loaded ${_allDevices.length} devices');
       _isLoading = false;
       notifyListeners();
     } catch (e) {
+      debugPrint('❌ Error loading devices: $e');
       _error = e.toString();
       _isLoading = false;
       notifyListeners();
@@ -116,22 +119,46 @@ class DeviceProvider extends ChangeNotifier {
 
   // Select a device
   Future<void> selectDevice(String deviceId) async {
+    debugPrint('🔄 Selecting device: $deviceId');
     _selectedDeviceId = deviceId;
     _isLoading = true;
     _error = null;
     notifyListeners();
 
     try {
+      // Get device info
+      debugPrint('📡 Fetching device info from API...');
       _deviceInfo = await _apiService.getDevice(deviceId);
+      debugPrint('✅ Device info loaded');
       
-      // Load initial data if available
+      // Load initial data if available from device info
       if (_deviceInfo?.currentData != null) {
+        debugPrint('✅ Current data found in device info');
         _updateCurrentData(_deviceInfo!.currentData!);
+      } else {
+        // If no current data in device info, try to fetch latest reading
+        debugPrint('⚠️ No current data in device info, fetching latest reading...');
+        try {
+          final readings = await _apiService.getReadings(deviceId, limit: 1);
+          if (readings.isNotEmpty) {
+            debugPrint('✅ Loaded latest reading from API');
+            _updateCurrentData(readings.first);
+          } else {
+            debugPrint('⚠️ No readings found for device $deviceId');
+            // Even if no readings, we should still show the UI
+            // The user can see "waiting for data" message
+          }
+        } catch (e) {
+          debugPrint('❌ Error fetching latest reading: $e');
+          // Don't throw error here, just log it
+          // The app can still work with WebSocket data
+        }
       }
       
       _isLoading = false;
       notifyListeners();
     } catch (e) {
+      debugPrint('❌ Error selecting device: $e');
       _error = e.toString();
       _isLoading = false;
       notifyListeners();
@@ -142,15 +169,27 @@ class DeviceProvider extends ChangeNotifier {
   Future<void> refreshDevice() async {
     if (_selectedDeviceId == null) return;
 
+    debugPrint('🔄 Refreshing device data...');
     try {
       _deviceInfo = await _apiService.getDevice(_selectedDeviceId!);
       
+      // Try to get current data from device info
       if (_deviceInfo?.currentData != null) {
+        debugPrint('✅ Updated with current data from device info');
         _updateCurrentData(_deviceInfo!.currentData!);
+      } else {
+        // Fetch latest reading
+        debugPrint('📡 Fetching latest reading...');
+        final readings = await _apiService.getReadings(_selectedDeviceId!, limit: 1);
+        if (readings.isNotEmpty) {
+          debugPrint('✅ Updated with latest reading');
+          _updateCurrentData(readings.first);
+        }
       }
       
       notifyListeners();
     } catch (e) {
+      debugPrint('❌ Error refreshing device: $e');
       _error = e.toString();
       notifyListeners();
     }
@@ -161,10 +200,12 @@ class DeviceProvider extends ChangeNotifier {
     if (_selectedDeviceId == null) return;
 
     try {
+      debugPrint('📊 Loading statistics...');
       _statistics = await _apiService.getStatistics(_selectedDeviceId);
+      debugPrint('✅ Statistics loaded');
       notifyListeners();
     } catch (e) {
-      debugPrint('Error loading statistics: $e');
+      debugPrint('❌ Error loading statistics: $e');
     }
   }
 
@@ -173,6 +214,7 @@ class DeviceProvider extends ChangeNotifier {
     if (_selectedDeviceId == null) return false;
 
     try {
+      debugPrint('🔌 Controlling relay - Channel $channel: ${turnOn ? "ON" : "OFF"}');
       final success = await _apiService.controlRelay(
         _selectedDeviceId!,
         turnOn,
@@ -180,12 +222,17 @@ class DeviceProvider extends ChangeNotifier {
       );
       
       if (success) {
-        // Refresh device data
+        debugPrint('✅ Relay command successful');
+        // Refresh device data after a short delay to see the change
+        await Future.delayed(const Duration(milliseconds: 500));
         await refreshDevice();
+      } else {
+        debugPrint('❌ Relay command failed');
       }
       
       return success;
     } catch (e) {
+      debugPrint('❌ Error controlling relay: $e');
       _error = e.toString();
       notifyListeners();
       return false;
@@ -197,17 +244,23 @@ class DeviceProvider extends ChangeNotifier {
     if (_selectedDeviceId == null) return false;
 
     try {
+      debugPrint('🔌 Controlling all relays: ${turnOn ? "ON" : "OFF"}');
       final success = await _apiService.controlRelay(
         _selectedDeviceId!,
         turnOn,
       );
       
       if (success) {
+        debugPrint('✅ All relays command successful');
+        await Future.delayed(const Duration(milliseconds: 500));
         await refreshDevice();
+      } else {
+        debugPrint('❌ All relays command failed');
       }
       
       return success;
     } catch (e) {
+      debugPrint('❌ Error controlling all relays: $e');
       _error = e.toString();
       notifyListeners();
       return false;
@@ -219,6 +272,7 @@ class DeviceProvider extends ChangeNotifier {
     if (_selectedDeviceId == null) return false;
 
     try {
+      debugPrint('📤 Sending command: $command ${parameters ?? ""}');
       final success = await _apiService.sendCommand(
         _selectedDeviceId!,
         command,
@@ -226,13 +280,23 @@ class DeviceProvider extends ChangeNotifier {
       );
       
       if (success) {
+        debugPrint('✅ Command sent successfully');
         // Also send via WebSocket for immediate response
         _webSocketService.sendCommand(_selectedDeviceId!, 
             parameters != null ? '$command $parameters' : command);
+        
+        // Refresh data if it's a command that might change state
+        if (command == 'status' || command == 'test' || command == 'diagnostics') {
+          await Future.delayed(const Duration(milliseconds: 500));
+          await refreshDevice();
+        }
+      } else {
+        debugPrint('❌ Command failed');
       }
       
       return success;
     } catch (e) {
+      debugPrint('❌ Error sending command: $e');
       _error = e.toString();
       notifyListeners();
       return false;
@@ -242,38 +306,66 @@ class DeviceProvider extends ChangeNotifier {
   // System commands
   Future<bool> systemReset() async {
     if (_selectedDeviceId == null) return false;
-    return await _apiService.systemReset(_selectedDeviceId!);
+    debugPrint('⚠️ Executing system reset...');
+    final success = await _apiService.systemReset(_selectedDeviceId!);
+    if (success) {
+      debugPrint('✅ System reset successful');
+      // Clear local data as device will restart
+      _currentData = null;
+      notifyListeners();
+    }
+    return success;
   }
 
   Future<bool> systemRestart() async {
     if (_selectedDeviceId == null) return false;
-    return await _apiService.systemRestart(_selectedDeviceId!);
+    debugPrint('⚠️ Executing system restart...');
+    final success = await _apiService.systemRestart(_selectedDeviceId!);
+    if (success) {
+      debugPrint('✅ System restart successful');
+      // Clear local data as device will restart
+      _currentData = null;
+      notifyListeners();
+    }
+    return success;
   }
 
   // Configuration
   Future<bool> setConfig(String parameter, dynamic value) async {
     if (_selectedDeviceId == null) return false;
+    debugPrint('⚙️ Setting config: $parameter = $value');
     return await _apiService.setConfig(_selectedDeviceId!, parameter, value);
   }
 
   // Generate mock data for testing
   Future<bool> generateMockData({int count = 1}) async {
     if (_selectedDeviceId == null) return false;
-    return await _apiService.generateMockData(_selectedDeviceId!, count: count);
+    debugPrint('🎲 Generating $count mock data reading(s)...');
+    final success = await _apiService.generateMockData(_selectedDeviceId!, count: count);
+    if (success) {
+      debugPrint('✅ Mock data generated');
+      // Refresh to load the new data
+      await Future.delayed(const Duration(milliseconds: 300));
+      await refreshDevice();
+    }
+    return success;
   }
 
   // Connect WebSocket
   void connectWebSocket(String serverUrl) {
+    debugPrint('🔌 Connecting to WebSocket: $serverUrl');
     _webSocketService.connect(serverUrl);
   }
 
   // Disconnect WebSocket
   void disconnectWebSocket() {
+    debugPrint('🔌 Disconnecting WebSocket');
     _webSocketService.disconnect();
   }
 
   // Clear data
   void clearData() {
+    debugPrint('🗑️ Clearing all device data');
     _currentData = null;
     _deviceInfo = null;
     _statistics = null;

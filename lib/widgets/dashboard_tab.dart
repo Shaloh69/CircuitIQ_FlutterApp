@@ -153,6 +153,100 @@ class _DashboardTabState extends State<DashboardTab> {
                   ),
                 ),
 
+              // Channel 1 Current Warning Banner
+              if (deviceProvider.ch1CurrentStatus != CurrentStatus.normal)
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: getCurrentStatusColor(deviceProvider.ch1CurrentStatus).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: getCurrentStatusColor(deviceProvider.ch1CurrentStatus),
+                      width: 2,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        getCurrentStatusIcon(deviceProvider.ch1CurrentStatus),
+                        color: getCurrentStatusColor(deviceProvider.ch1CurrentStatus),
+                        size: 24,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'CHANNEL 1: ${getCurrentStatusText(deviceProvider.ch1CurrentStatus)}',
+                              style: TextStyle(
+                                color: getCurrentStatusColor(deviceProvider.ch1CurrentStatus),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                            Text(
+                              'Current draw: ${formatNumber(data.channel1.current, decimals: 2)}A',
+                              style: TextStyle(
+                                color: Colors.grey[700],
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+              // Channel 2 Current Warning Banner
+              if (deviceProvider.ch2CurrentStatus != CurrentStatus.normal)
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: getCurrentStatusColor(deviceProvider.ch2CurrentStatus).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: getCurrentStatusColor(deviceProvider.ch2CurrentStatus),
+                      width: 2,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        getCurrentStatusIcon(deviceProvider.ch2CurrentStatus),
+                        color: getCurrentStatusColor(deviceProvider.ch2CurrentStatus),
+                        size: 24,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'CHANNEL 2: ${getCurrentStatusText(deviceProvider.ch2CurrentStatus)}',
+                              style: TextStyle(
+                                color: getCurrentStatusColor(deviceProvider.ch2CurrentStatus),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                            Text(
+                              'Current draw: ${formatNumber(data.channel2.current, decimals: 2)}A',
+                              style: TextStyle(
+                                color: Colors.grey[700],
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
               // Connection Status Banner
               if (!deviceProvider.isConnected)
                 Container(
@@ -248,14 +342,16 @@ class _DashboardTabState extends State<DashboardTab> {
                 channelNumber: 1,
                 channelData: data.channel1,
                 color: AppColors.channel1,
+                currentStatus: deviceProvider.ch1CurrentStatus,
               ),
               const SizedBox(height: 16),
-              
+
               // Channel 2
               ChannelCard(
                 channelNumber: 2,
                 channelData: data.channel2,
                 color: AppColors.channel2,
+                currentStatus: deviceProvider.ch2CurrentStatus,
               ),
               const SizedBox(height: 16),
               

@@ -32,6 +32,8 @@ class DeviceProvider extends ChangeNotifier {
   String? _error;
   String? _selectedDeviceId;
   VoltageStatus _voltageStatus = VoltageStatus.normal;
+  CurrentStatus _ch1CurrentStatus = CurrentStatus.normal;
+  CurrentStatus _ch2CurrentStatus = CurrentStatus.normal;
 
   // Getters
   DeviceData? get currentData => _currentData;
@@ -43,6 +45,8 @@ class DeviceProvider extends ChangeNotifier {
   String? get selectedDeviceId => _selectedDeviceId;
   bool get isConnected => _webSocketService.isConnected;
   VoltageStatus get voltageStatus => _voltageStatus;
+  CurrentStatus get ch1CurrentStatus => _ch1CurrentStatus;
+  CurrentStatus get ch2CurrentStatus => _ch2CurrentStatus;
 
   List<ChartDataPoint> get voltageData => _voltageData;
   List<ChartDataPoint> get ch1CurrentData => _ch1CurrentData;
@@ -71,11 +75,21 @@ class DeviceProvider extends ChangeNotifier {
   void _updateCurrentData(DeviceData data) {
     _currentData = data;
     _voltageStatus = getVoltageStatus(data.voltage);
+    _ch1CurrentStatus = getCurrentStatus(data.channel1.current);
+    _ch2CurrentStatus = getCurrentStatus(data.channel2.current);
     _addToChartData(data);
 
     // Log voltage warnings
     if (_voltageStatus != VoltageStatus.normal) {
       debugPrint('⚠️ ${getVoltageStatusText(_voltageStatus)}: ${data.voltage}V');
+    }
+
+    // Log current warnings
+    if (_ch1CurrentStatus != CurrentStatus.normal) {
+      debugPrint('⚠️ CH1 ${getCurrentStatusText(_ch1CurrentStatus)}: ${data.channel1.current}A');
+    }
+    if (_ch2CurrentStatus != CurrentStatus.normal) {
+      debugPrint('⚠️ CH2 ${getCurrentStatusText(_ch2CurrentStatus)}: ${data.channel2.current}A');
     }
 
     notifyListeners();
@@ -380,6 +394,8 @@ class DeviceProvider extends ChangeNotifier {
     _statistics = null;
     _selectedDeviceId = null;
     _voltageStatus = VoltageStatus.normal;
+    _ch1CurrentStatus = CurrentStatus.normal;
+    _ch2CurrentStatus = CurrentStatus.normal;
     _voltageData.clear();
     _ch1CurrentData.clear();
     _ch2CurrentData.clear();

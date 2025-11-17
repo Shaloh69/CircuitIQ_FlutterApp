@@ -6,12 +6,14 @@ class ChannelCard extends StatelessWidget {
   final int channelNumber;
   final ChannelData channelData;
   final Color color;
+  final CurrentStatus? currentStatus;
 
   const ChannelCard({
     super.key,
     required this.channelNumber,
     required this.channelData,
     required this.color,
+    this.currentStatus,
   });
 
   @override
@@ -69,6 +71,38 @@ class ChannelCard extends StatelessWidget {
               ],
             ),
             const Divider(),
+            // Current status indicator (if abnormal)
+            if (currentStatus != null && currentStatus != CurrentStatus.normal)
+              Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: getCurrentStatusColor(currentStatus!).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: getCurrentStatusColor(currentStatus!),
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      getCurrentStatusIcon(currentStatus!),
+                      color: getCurrentStatusColor(currentStatus!),
+                      size: 16,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      getCurrentStatusText(currentStatus!),
+                      style: TextStyle(
+                        color: getCurrentStatusColor(currentStatus!),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             Row(
               children: [
                 Expanded(
@@ -77,7 +111,9 @@ class ChannelCard extends StatelessWidget {
                     'Current',
                     formatNumber(channelData.current, decimals: 3),
                     AppStrings.unitCurrent,
-                    AppColors.currentColor,
+                    currentStatus != null && currentStatus != CurrentStatus.normal
+                        ? getCurrentStatusColor(currentStatus!)
+                        : AppColors.currentColor,
                   ),
                 ),
                 Expanded(

@@ -53,6 +53,11 @@ class AppConstants {
   static const double maxNormalVoltage = 235.0;   // Above this = overvoltage warning
   static const double criticalLowVoltage = 200.0;  // Below this = critical undervoltage
   static const double criticalHighVoltage = 245.0; // Above this = critical overvoltage
+
+  // Current thresholds (in Amperes)
+  static const double maxNormalCurrent = 12.0;     // Above this = overload warning
+  static const double maxWarningCurrent = 15.0;    // Above this = critical overload
+  static const double maxCriticalCurrent = 20.0;   // Above this = potential short circuit
 }
 
 class DeviceCommands {
@@ -123,6 +128,14 @@ enum VoltageStatus {
   normal,
   high,
   criticalHigh,
+}
+
+// Current status enum
+enum CurrentStatus {
+  normal,
+  warning,      // Overload warning
+  critical,     // Critical overload
+  short,        // Potential short circuit
 }
 
 // Helper functions
@@ -197,6 +210,57 @@ IconData getVoltageStatusIcon(VoltageStatus status) {
     case VoltageStatus.high:
       return Icons.warning;
     case VoltageStatus.normal:
+      return Icons.check_circle;
+  }
+}
+
+// Current status helpers
+CurrentStatus getCurrentStatus(double current) {
+  if (current > AppConstants.maxCriticalCurrent) {
+    return CurrentStatus.short;
+  } else if (current > AppConstants.maxWarningCurrent) {
+    return CurrentStatus.critical;
+  } else if (current > AppConstants.maxNormalCurrent) {
+    return CurrentStatus.warning;
+  } else {
+    return CurrentStatus.normal;
+  }
+}
+
+Color getCurrentStatusColor(CurrentStatus status) {
+  switch (status) {
+    case CurrentStatus.short:
+    case CurrentStatus.critical:
+      return AppColors.danger;
+    case CurrentStatus.warning:
+      return AppColors.warning;
+    case CurrentStatus.normal:
+      return AppColors.success;
+  }
+}
+
+String getCurrentStatusText(CurrentStatus status) {
+  switch (status) {
+    case CurrentStatus.short:
+      return 'SHORT CIRCUIT';
+    case CurrentStatus.critical:
+      return 'CRITICAL OVERLOAD';
+    case CurrentStatus.warning:
+      return 'OVERLOAD WARNING';
+    case CurrentStatus.normal:
+      return 'NORMAL';
+  }
+}
+
+IconData getCurrentStatusIcon(CurrentStatus status) {
+  switch (status) {
+    case CurrentStatus.short:
+      return Icons.flash_on;
+    case CurrentStatus.critical:
+      return Icons.error;
+    case CurrentStatus.warning:
+      return Icons.warning;
+    case CurrentStatus.normal:
       return Icons.check_circle;
   }
 }

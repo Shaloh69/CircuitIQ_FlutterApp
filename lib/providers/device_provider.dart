@@ -18,7 +18,7 @@ class DeviceProvider extends ChangeNotifier {
   DeviceInfo? _deviceInfo;
   List<DeviceInfo> _allDevices = [];
   Statistics? _statistics;
-  
+
   // Chart data
   final List<ChartDataPoint> _voltageData = [];
   final List<ChartDataPoint> _ch1CurrentData = [];
@@ -26,11 +26,12 @@ class DeviceProvider extends ChangeNotifier {
   final List<ChartDataPoint> _ch1PowerData = [];
   final List<ChartDataPoint> _ch2PowerData = [];
   final List<ChartDataPoint> _totalPowerData = [];
-  
+
   // State
   bool _isLoading = false;
   String? _error;
   String? _selectedDeviceId;
+  VoltageStatus _voltageStatus = VoltageStatus.normal;
 
   // Getters
   DeviceData? get currentData => _currentData;
@@ -41,6 +42,7 @@ class DeviceProvider extends ChangeNotifier {
   String? get error => _error;
   String? get selectedDeviceId => _selectedDeviceId;
   bool get isConnected => _webSocketService.isConnected;
+  VoltageStatus get voltageStatus => _voltageStatus;
 
   List<ChartDataPoint> get voltageData => _voltageData;
   List<ChartDataPoint> get ch1CurrentData => _ch1CurrentData;
@@ -68,7 +70,14 @@ class DeviceProvider extends ChangeNotifier {
 
   void _updateCurrentData(DeviceData data) {
     _currentData = data;
+    _voltageStatus = getVoltageStatus(data.voltage);
     _addToChartData(data);
+
+    // Log voltage warnings
+    if (_voltageStatus != VoltageStatus.normal) {
+      debugPrint('⚠️ ${getVoltageStatusText(_voltageStatus)}: ${data.voltage}V');
+    }
+
     notifyListeners();
   }
 
@@ -370,6 +379,7 @@ class DeviceProvider extends ChangeNotifier {
     _deviceInfo = null;
     _statistics = null;
     _selectedDeviceId = null;
+    _voltageStatus = VoltageStatus.normal;
     _voltageData.clear();
     _ch1CurrentData.clear();
     _ch2CurrentData.clear();

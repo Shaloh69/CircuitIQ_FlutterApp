@@ -21,7 +21,7 @@ class AppConstants {
   // Default server configuration
   static const String defaultServerUrl = 'http://192.168.1.100:3000';
   static const String deviceType = 'CIRQUITIQ';
-  
+
   // API Endpoints
   static const String apiHealth = '/api/health';
   static const String apiDevices = '/api/devices';
@@ -31,22 +31,28 @@ class AppConstants {
   static const String apiRelay = '/api/admin/relay';
   static const String apiSystem = '/api/admin/system';
   static const String apiConfig = '/api/admin/config';
-  
+
   // Storage Keys
   static const String keyServerUrl = 'server_url';
   static const String keyDeviceId = 'device_id';
   static const String keyUsername = 'username';
   static const String keyPassword = 'password';
   static const String keyRememberMe = 'remember_me';
-  
+
   // Update intervals (milliseconds)
   static const int dataUpdateInterval = 1000;
   static const int chartUpdateInterval = 2000;
   static const int statsUpdateInterval = 5000;
-  
+
   // Chart settings
   static const int maxDataPoints = 50;
   static const double chartHeight = 200.0;
+
+  // Voltage thresholds (in Volts)
+  static const double minNormalVoltage = 210.0;   // Below this = undervoltage warning
+  static const double maxNormalVoltage = 235.0;   // Above this = overvoltage warning
+  static const double criticalLowVoltage = 200.0;  // Below this = critical undervoltage
+  static const double criticalHighVoltage = 245.0; // Above this = critical overvoltage
 }
 
 class DeviceCommands {
@@ -110,6 +116,15 @@ class AppStrings {
   static const String history = 'History';
 }
 
+// Voltage status enum
+enum VoltageStatus {
+  criticalLow,
+  low,
+  normal,
+  high,
+  criticalHigh,
+}
+
 // Helper functions
 String formatNumber(double? value, {int decimals = 2}) {
   if (value == null) return '---';
@@ -128,4 +143,60 @@ String getRelayStatusText(bool state) {
 
 Color getRelayStatusColor(bool state) {
   return state ? AppColors.success : AppColors.danger;
+}
+
+// Voltage status helpers
+VoltageStatus getVoltageStatus(double voltage) {
+  if (voltage < AppConstants.criticalLowVoltage) {
+    return VoltageStatus.criticalLow;
+  } else if (voltage < AppConstants.minNormalVoltage) {
+    return VoltageStatus.low;
+  } else if (voltage > AppConstants.criticalHighVoltage) {
+    return VoltageStatus.criticalHigh;
+  } else if (voltage > AppConstants.maxNormalVoltage) {
+    return VoltageStatus.high;
+  } else {
+    return VoltageStatus.normal;
+  }
+}
+
+Color getVoltageStatusColor(VoltageStatus status) {
+  switch (status) {
+    case VoltageStatus.criticalLow:
+    case VoltageStatus.criticalHigh:
+      return AppColors.danger;
+    case VoltageStatus.low:
+    case VoltageStatus.high:
+      return AppColors.warning;
+    case VoltageStatus.normal:
+      return AppColors.success;
+  }
+}
+
+String getVoltageStatusText(VoltageStatus status) {
+  switch (status) {
+    case VoltageStatus.criticalLow:
+      return 'CRITICAL UNDERVOLTAGE';
+    case VoltageStatus.low:
+      return 'UNDERVOLTAGE';
+    case VoltageStatus.normal:
+      return 'NORMAL';
+    case VoltageStatus.high:
+      return 'OVERVOLTAGE';
+    case VoltageStatus.criticalHigh:
+      return 'CRITICAL OVERVOLTAGE';
+  }
+}
+
+IconData getVoltageStatusIcon(VoltageStatus status) {
+  switch (status) {
+    case VoltageStatus.criticalLow:
+    case VoltageStatus.criticalHigh:
+      return Icons.error;
+    case VoltageStatus.low:
+    case VoltageStatus.high:
+      return Icons.warning;
+    case VoltageStatus.normal:
+      return Icons.check_circle;
+  }
 }

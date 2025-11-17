@@ -106,6 +106,53 @@ class _DashboardTabState extends State<DashboardTab> {
           child: ListView(
             padding: const EdgeInsets.all(16),
             children: [
+              // Voltage Warning Banner
+              if (deviceProvider.voltageStatus != VoltageStatus.normal)
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: getVoltageStatusColor(deviceProvider.voltageStatus).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: getVoltageStatusColor(deviceProvider.voltageStatus),
+                      width: 2,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        getVoltageStatusIcon(deviceProvider.voltageStatus),
+                        color: getVoltageStatusColor(deviceProvider.voltageStatus),
+                        size: 24,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              getVoltageStatusText(deviceProvider.voltageStatus),
+                              style: TextStyle(
+                                color: getVoltageStatusColor(deviceProvider.voltageStatus),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                            Text(
+                              'Current voltage: ${formatNumber(data.voltage, decimals: 1)}V',
+                              style: TextStyle(
+                                color: Colors.grey[700],
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
               // Connection Status Banner
               if (!deviceProvider.isConnected)
                 Container(
@@ -184,13 +231,15 @@ class _DashboardTabState extends State<DashboardTab> {
                 ),
               ),
               
-              // Voltage Card
+              // Voltage Card with status-based color
               MetricCard(
                 title: 'System Voltage',
                 value: formatNumber(data.voltage, decimals: 1),
                 unit: AppStrings.unitVoltage,
                 icon: Icons.bolt,
-                color: AppColors.voltageColor,
+                color: deviceProvider.voltageStatus == VoltageStatus.normal
+                    ? AppColors.voltageColor
+                    : getVoltageStatusColor(deviceProvider.voltageStatus),
               ),
               const SizedBox(height: 16),
               
